@@ -1,0 +1,38 @@
+.claude/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+smart-contracts/node_modules/
+
+# Hardhat build outputs
+smart-contracts/artifacts/
+smart-contracts/cache/
+smart-contracts/types/
+smart-contracts/typechain-types/
+
+# Frontend build outputs
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.nuxt/
+frontend/.vite/
+frontend/.cache/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor clutter
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
