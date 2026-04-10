@@ -12,7 +12,7 @@ export default function Dashboard({ contract, address }) {
       const formatted = results.map(d => ({
         id: d.id.toString(),
         ipfsHash: d.ipfsHash,
-        timestamp: new Date(d.timestamp.toNumber() * 1000).toLocaleString(),
+        timestamp: new Date(Number(d.timestamp) * 1000).toLocaleString(),
         previousVersionId: d.previousVersionId.toString()
       }));
       setDatasets(formatted);

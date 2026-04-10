@@ -12,8 +12,8 @@ export default function RegisterDataset({ contract }) {
     }
     try {
       const tx = await contract.registerDataset(hash);
-      const receipt = await tx.wait();
-      setTxHash(receipt.transactionHash);
+      await tx.wait();
+      setTxHash(tx.hash);
       setHash('');
     } catch (err) {
       console.error(err);
@@ -36,7 +36,7 @@ export default function RegisterDataset({ contract }) {
         <button type="submit" style={{ padding: '0.3rem 0.6rem' }}>Register</button>
       </form>
       {txHash && (
-        <p>Transaction submitted: <a href={`https://sepolia.etherscan.io/tx/${txHash}`} target="_blank" rel="noreferrer" >{txHash.slice(0, 10)}...</a></p>
+        <p>Last transaction hash: {txHash}</p>
       )}
     </div>
   );
