@@ -50,7 +50,7 @@ contract DataProvenance {
         Dataset storage ds = datasets[id];
         if (ds.id == 0) revert DatasetDoesNotExist(id);
         if (ds.owner != msg.sender) revert UnauthorizedAccess();
-        if (previousVersionId != ds.id && ds.previousVersionId != previousVersionId) revert InvalidVersionUpdate();
+        if (previousVersionId != ds.id) revert InvalidVersionUpdate();
         ds.ipfsHash = newIpfsHash;
         ds.timestamp = block.timestamp;
         ds.previousVersionId = previousVersionId;

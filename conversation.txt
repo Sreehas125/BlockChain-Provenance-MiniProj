@@ -1,0 +1,20 @@
+User: Read the README.md and prd.md files and lemme know what work is yet to be done and how it is to be done.
+Assistant: Summarized pending front‑end work.
+User: Can you just write the code in solidity instead? (or is js actually required?)
+Assistant: Provided Solidity contract and explanation of UI vs. CLI.
+User: Add the react UI and decide the interaction part that is better for the project.
+Assistant: Added React scaffolding, .env, README, etc.
+User: Error about tag mismatches – fixed.
+Assistant: Fixed JSX closing tags.
+User: Need IPFS CID, dataset ID, CID help.
+Assistant: Guidance on IPFS, UI registration.
+User: Want IPFS install link and guidance.
+Assistant: Provided IPFS Desktop install link and steps.
+User: Provide dataset folder with train.csv, Data.csv, Metadata.csv.
+Assistant: Created datasets folder and copied files.
+User: Doubt about needing crypto.
+Assistant: Explained test ETH vs. POL.
+User: Not enough POL in account.
+Assistant: Explained staying on local Hardhat or using Polygon testnet.
+User: Save the conversation in the same folder.
+Assistant:
