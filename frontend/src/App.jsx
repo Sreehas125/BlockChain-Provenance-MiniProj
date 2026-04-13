@@ -13,8 +13,36 @@ export default function App() {
   const [address, setAddress] = useState('');
   const [contract, setContract] = useState(null);
   const [contractError, setContractError] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [chainId, setChainId] = useState('');
 
-  // Load contract when signer and ABI are ready
+  const refreshDatasets = () => {
+    setRefreshKey(current => current + 1);
+  };
+
+  useEffect(() => {
+    if (!provider) {
+      setChainId('');
+      return;
+    }
+
+    let active = true;
+
+    provider.getNetwork()
+      .then(network => {
+        if (active) {
+          setChainId(network.chainId.toString());
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load network', err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [provider]);
+
   useEffect(() => {
     if (!signer) {
       setContract(null);
@@ -22,18 +50,18 @@ export default function App() {
       return;
     }
 
-    // ABI file should be placed at src/abi/DataProvenance.json
     import('./abi/DataProvenance.json')
       .then(module => {
-        const abi = module.default?.abi || module.default; // Hardhat artifact structure
-        const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS; // user provides via .env
+        const abi = module.default?.abi || module.default;
+        const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
         if (!contractAddress || !ethers.isAddress(contractAddress)) {
           setContract(null);
           setContractError('Set a valid VITE_CONTRACT_ADDRESS in frontend/.env after deploying the contract.');
           return;
         }
-        const c = new ethers.Contract(contractAddress, abi, signer);
-        setContract(c);
+
+        const nextContract = new ethers.Contract(contractAddress, abi, signer);
+        setContract(nextContract);
         setContractError('');
       })
       .catch(err => {
@@ -44,21 +72,63 @@ export default function App() {
   }, [signer]);
 
   return (
-    <Web3Context.Provider value={{ provider, signer, address, contract }}
-    >
-      <div style={{ padding: '1rem', fontFamily: 'Arial, sans-serif' }}>
-        <h1>Research Provenance DApp</h1>
-        <ConnectWallet setProvider={setProvider} setSigner={setSigner} setAddress={setAddress} />
-        {address && (
-          <div style={{ marginTop: '1rem' }}>
-            {contractError && (
-              <p style={{ color: '#b42318', marginBottom: '1rem' }}>{contractError}</p>
-            )}
-            <RegisterDataset contract={contract} />
-            <UpdateDataset contract={contract} />
-            <Dashboard contract={contract} address={address} />
-          </div>
-        )}
+    <Web3Context.Provider value={{ provider, signer, address, contract }}>
+      <div className="app-shell">
+        <div className="app-backdrop" />
+        <main className="app-container">
+          <section className="hero-card">
+            <div>
+              <p className="eyebrow">Blockchain Research Integrity</p>
+              <h1>Research Provenance DApp</h1>
+              <p className="hero-copy">
+                Register dataset fingerprints, preserve authorship, and track version changes on a local blockchain.
+              </p>
+            </div>
+            <div className="hero-aside">
+              <div className="stat-card">
+                <span className="stat-label">Connected Network</span>
+                <strong>{chainId ? `Chain ID ${chainId}` : 'Not connected'}</strong>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Contract</span>
+                <strong className="mono">
+                  {import.meta.env.VITE_CONTRACT_ADDRESS || 'Missing address'}
+                </strong>
+              </div>
+            </div>
+          </section>
+
+          <ConnectWallet
+            address={address}
+            chainId={chainId}
+            setProvider={setProvider}
+            setSigner={setSigner}
+            setAddress={setAddress}
+          />
+
+          {contractError && (
+            <div className="notice notice-error">
+              <strong>Contract setup issue.</strong> {contractError}
+            </div>
+          )}
+
+          {address ? (
+            <div className="content-grid">
+              <div className="panel-stack">
+                <RegisterDataset contract={contract} onSuccess={refreshDatasets} />
+                <UpdateDataset contract={contract} onSuccess={refreshDatasets} />
+              </div>
+              <Dashboard contract={contract} address={address} refreshKey={refreshKey} />
+            </div>
+          ) : (
+            <section className="empty-card">
+              <h2>Connect your wallet to begin</h2>
+              <p>
+                Use the Hardhat local account in MetaMask, then register or update dataset versions and inspect their on-chain history.
+              </p>
+            </section>
+          )}
+        </main>
       </div>
     </Web3Context.Provider>
   );

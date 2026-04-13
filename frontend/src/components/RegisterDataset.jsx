@@ -1,43 +1,65 @@
 import React, { useState } from 'react';
 
-export default function RegisterDataset({ contract }) {
+export default function RegisterDataset({ contract, onSuccess }) {
   const [hash, setHash] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     if (!contract) {
-      alert('Contract not loaded yet');
+      setErrorMessage('Contract not loaded yet. Check your wallet connection and deployed address.');
       return;
     }
+
     try {
+      setIsSubmitting(true);
+      setErrorMessage('');
       const tx = await contract.registerDataset(hash);
       await tx.wait();
       setTxHash(tx.hash);
       setHash('');
+      onSuccess?.();
     } catch (err) {
       console.error(err);
-      alert('Transaction failed');
+      setErrorMessage(err?.shortMessage || 'Registration failed. Please confirm the transaction in MetaMask.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div style={{ border: '1px solid #ccc', padding: '1rem', marginBottom: '1rem' }}>
-      <h3>Register Dataset</h3>
-      <form onSubmit={submit}>
+    <section className="panel-card accent-card">
+      <div className="panel-header">
+        <div>
+          <p className="section-kicker">Step 1</p>
+          <h2>Register Dataset</h2>
+        </div>
+        <span className="panel-badge">Create provenance record</span>
+      </div>
+      <p className="muted-copy">
+        Enter an IPFS CID or any dataset fingerprint to timestamp ownership on-chain.
+      </p>
+      <form className="stack-form" onSubmit={submit}>
         <input
+          className="text-input"
           type="text"
-          placeholder="IPFS hash"
+          placeholder="Enter IPFS CID or dataset hash"
           value={hash}
           onChange={e => setHash(e.target.value)}
           required
-          style={{ width: '60%', marginRight: '0.5rem' }}
         />
-        <button type="submit" style={{ padding: '0.3rem 0.6rem' }}>Register</button>
+        <button className="primary-button" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Registering...' : 'Register Dataset'}
+        </button>
       </form>
+      {errorMessage && <p className="inline-error">{errorMessage}</p>}
       {txHash && (
-        <p>Last transaction hash: {txHash}</p>
+        <div className="notice notice-success">
+          <strong>Registered successfully.</strong> Transaction hash: <span className="mono">{txHash}</span>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
