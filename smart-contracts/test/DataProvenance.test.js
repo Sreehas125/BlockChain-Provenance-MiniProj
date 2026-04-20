@@ -31,7 +31,7 @@ describe("DataProvenance", function () {
   });
 
   describe("Dataset Updates (Provenance Tracking)", function () {
-    it("Should allow owner to update an existing dataset", async function () {
+    it("Should allow owner to create a new linked version", async function () {
       const { dataProvenance, owner } = await deployDataProvenanceFixture();
       const hashV1 = "QmTestHashV1";
       const hashV2 = "QmTestHashV2";
@@ -39,13 +39,22 @@ describe("DataProvenance", function () {
       // Register initial version
       await dataProvenance.registerDataset(hashV1);
 
-      // Update the dataset (requires ID, new hash, and previous version ID)
+      // Create a new version linked to version 1
       await dataProvenance.updateDataset(1n, hashV2, 1n);
 
-      // Verify it updated correctly
-      const datasetV2 = await dataProvenance.getDataset(1n);
+      // Verify the original version is preserved
+      const datasetV1 = await dataProvenance.getDataset(1n);
+      expect(datasetV1.ipfsHash).to.equal(hashV1);
+      expect(datasetV1.previousVersionId).to.equal(0n);
+
+      // Verify the new version is stored as a separate record
+      const datasetV2 = await dataProvenance.getDataset(2n);
       expect(datasetV2.ipfsHash).to.equal(hashV2);
-      expect(datasetV2.previousVersionId).to.equal(1n); 
+      expect(datasetV2.owner).to.equal(owner.address);
+      expect(datasetV2.previousVersionId).to.equal(1n);
+
+      const ownerDatasetIds = await dataProvenance.getDatasetsByOwner(owner.address);
+      expect(ownerDatasetIds).to.deep.equal([1n, 2n]);
     });
 
     it("Should revert with custom error if a non-owner tries to update", async function () {
@@ -68,6 +77,16 @@ describe("DataProvenance", function () {
         dataProvenance.updateDataset(99n, "QmHash", 0n)
       ).to.be.revertedWithCustomError(dataProvenance, "DatasetDoesNotExist")
        .withArgs(99n);
+    });
+
+    it("Should revert if previous version ID does not match the dataset being extended", async function () {
+      const { dataProvenance } = await deployDataProvenanceFixture();
+
+      await dataProvenance.registerDataset("QmTestHashV1");
+
+      await expect(
+        dataProvenance.updateDataset(1n, "QmTestHashV2", 7n)
+      ).to.be.revertedWithCustomError(dataProvenance, "InvalidVersionUpdate");
     });
   });
 });
