@@ -27,7 +27,13 @@ contract DataProvenance {
 
     // Events
     event DatasetRegistered(uint256 indexed id, string ipfsHash, address indexed owner, uint256 timestamp, uint256 previousVersionId);
-    event DatasetUpdated(uint256 indexed id, string newIpfsHash, uint256 timestamp);
+    event DatasetUpdated(
+        uint256 indexed id,
+        string newIpfsHash,
+        address indexed owner,
+        uint256 timestamp,
+        uint256 previousVersionId
+    );
 
     /// @dev Registers a new dataset.
     function registerDataset(string calldata ipfsHash) external returns (uint256) {
@@ -45,16 +51,27 @@ contract DataProvenance {
         return currentId;
     }
 
-    /// @dev Updates an existing dataset to a new version.
-    function updateDataset(uint256 id, string calldata newIpfsHash, uint256 previousVersionId) external {
-        Dataset storage ds = datasets[id];
-        if (ds.id == 0) revert DatasetDoesNotExist(id);
-        if (ds.owner != msg.sender) revert UnauthorizedAccess();
-        if (previousVersionId != ds.id) revert InvalidVersionUpdate();
-        ds.ipfsHash = newIpfsHash;
-        ds.timestamp = block.timestamp;
-        ds.previousVersionId = previousVersionId;
-        emit DatasetUpdated(id, newIpfsHash, block.timestamp);
+    /// @dev Creates a new dataset version linked to an existing one.
+    function updateDataset(uint256 id, string calldata newIpfsHash, uint256 previousVersionId) external returns (uint256) {
+        Dataset memory previousDataset = datasets[id];
+        if (previousDataset.id == 0) revert DatasetDoesNotExist(id);
+        if (previousDataset.owner != msg.sender) revert UnauthorizedAccess();
+        if (previousVersionId != previousDataset.id) revert InvalidVersionUpdate();
+
+        uint256 currentId = nextId++;
+        Dataset memory ds = Dataset({
+            id: currentId,
+            ipfsHash: newIpfsHash,
+            owner: msg.sender,
+            timestamp: block.timestamp,
+            previousVersionId: previousVersionId
+        });
+
+        datasets[currentId] = ds;
+        ownerDatasets[msg.sender].push(currentId);
+
+        emit DatasetUpdated(currentId, newIpfsHash, msg.sender, block.timestamp, previousVersionId);
+        return currentId;
     }
 
     /// @notice Retrieves dataset information.

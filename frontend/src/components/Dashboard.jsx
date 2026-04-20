@@ -15,9 +15,10 @@ export default function Dashboard({ contract, address, refreshKey }) {
       const formatted = results.map(d => ({
         id: d.id.toString(),
         ipfsHash: d.ipfsHash,
+        isRootVersion: d.previousVersionId === 0n,
         timestamp: new Date(Number(d.timestamp) * 1000).toLocaleString(),
         previousVersionId: d.previousVersionId.toString()
-      }));
+      })).sort((a, b) => Number(a.id) - Number(b.id));
       setDatasets(formatted);
     } catch (err) {
       console.error(err);
@@ -67,6 +68,7 @@ export default function Dashboard({ contract, address, refreshKey }) {
                 <th>ID</th>
                 <th>IPFS Hash</th>
                 <th>Timestamp</th>
+                <th>Version Type</th>
                 <th>Prev Version</th>
               </tr>
             </thead>
@@ -80,6 +82,7 @@ export default function Dashboard({ contract, address, refreshKey }) {
                     </a>
                   </td>
                   <td>{ds.timestamp}</td>
+                  <td>{ds.isRootVersion ? 'Original' : 'Derived Version'}</td>
                   <td>{ds.previousVersionId}</td>
                 </tr>
               ))}

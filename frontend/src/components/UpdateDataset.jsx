@@ -5,6 +5,7 @@ export default function UpdateDataset({ contract, onSuccess }) {
   const [newHash, setNewHash] = useState('');
   const [prevId, setPrevId] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [createdVersionId, setCreatedVersionId] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -15,24 +16,30 @@ export default function UpdateDataset({ contract, onSuccess }) {
       return;
     }
 
-    if (id !== prevId) {
-      setErrorMessage('Previous Version ID must match the Dataset ID for this contract. For dataset 1, enter 1.');
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       setErrorMessage('');
       const tx = await contract.updateDataset(id, newHash, prevId);
-      await tx.wait();
+      const receipt = await tx.wait();
+      const updateEvent = receipt.logs
+        .map(log => {
+          try {
+            return contract.interface.parseLog(log);
+          } catch {
+            return null;
+          }
+        })
+        .find(parsedLog => parsedLog?.name === 'DatasetUpdated');
+
       setTxHash(tx.hash);
+      setCreatedVersionId(updateEvent ? updateEvent.args.id.toString() : '');
       setId('');
       setNewHash('');
       setPrevId('');
       onSuccess?.();
     } catch (err) {
       console.error(err);
-      setErrorMessage(err?.shortMessage || 'Update failed. Make sure you are using your own dataset and set Previous Version ID equal to Dataset ID.');
+      setErrorMessage(err?.shortMessage || 'Update failed. Make sure you are extending one of your own dataset versions.');
     } finally {
       setIsSubmitting(false);
     }
@@ -47,17 +54,14 @@ export default function UpdateDataset({ contract, onSuccess }) {
         </div>
         <span className="panel-badge muted-badge">Record a new version</span>
       </div>
-      <p className="muted-copy">Current contract rule: `Dataset ID` and `Previous Version ID` must be the same value.</p>
+      <p className="muted-copy">Create a fresh on-chain version by linking it to the dataset version you are extending.</p>
       <form className="three-column-form" onSubmit={submit}>
         <input
           className="text-input"
           type="number"
-          placeholder="Dataset ID"
+          placeholder="Current Version ID"
           value={id}
-          onChange={e => {
-            setId(e.target.value);
-            setPrevId(e.target.value);
-          }}
+          onChange={e => setId(e.target.value)}
           required
         />
         <input
@@ -83,7 +87,7 @@ export default function UpdateDataset({ contract, onSuccess }) {
       {errorMessage && <p className="inline-error">{errorMessage}</p>}
       {txHash && (
         <div className="notice notice-success">
-          <strong>Version updated.</strong> Transaction hash: <span className="mono">{txHash}</span>
+          <strong>Version created.</strong> New dataset ID: <span className="mono">{createdVersionId || 'Loaded from event'}</span>. Transaction hash: <span className="mono">{txHash}</span>
         </div>
       )}
     </section>
