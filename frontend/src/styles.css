@@ -208,14 +208,23 @@ input {
 }
 
 .stack-form,
+.two-column-form,
 .three-column-form {
   display: grid;
   gap: 12px;
   margin-top: 18px;
 }
 
+.two-column-form {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(0, 1.3fr);
+}
+
 .three-column-form {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.two-column-form button {
+  grid-column: 1 / -1;
 }
 
 .text-input {
@@ -345,6 +354,7 @@ input {
   .hero-card,
   .wallet-card,
   .content-grid,
+  .two-column-form,
   .three-column-form,
   .summary-strip {
     grid-template-columns: 1fr;

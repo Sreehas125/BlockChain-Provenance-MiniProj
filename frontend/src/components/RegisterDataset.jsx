@@ -16,7 +16,13 @@ export default function RegisterDataset({ contract, onSuccess }) {
     try {
       setIsSubmitting(true);
       setErrorMessage('');
-      const tx = await contract.registerDataset(hash);
+      const trimmedHash = hash.trim();
+      if (!trimmedHash) {
+        setErrorMessage('Enter a CID or dataset fingerprint before registering.');
+        return;
+      }
+
+      const tx = await contract.registerDataset(trimmedHash);
       await tx.wait();
       setTxHash(tx.hash);
       setHash('');

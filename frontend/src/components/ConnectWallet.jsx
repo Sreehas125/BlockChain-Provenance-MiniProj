@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
 
 function shortenAddress(address) {
   if (!address) return '';
@@ -8,15 +9,25 @@ function shortenAddress(address) {
 export default function ConnectWallet({ address, chainId, setProvider, setSigner, setAddress }) {
   const [errorMessage, setErrorMessage] = useState('');
 
-  const connect = async () => {
+  const syncWallet = async (requestAccounts = false) => {
     if (!window.ethereum) {
       setErrorMessage('MetaMask not detected. Install MetaMask and connect to the Hardhat local network.');
       return;
     }
 
     try {
-      const [acct] = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const ethersProvider = new (await import('ethers')).ethers.BrowserProvider(window.ethereum);
+      const accounts = await window.ethereum.request({
+        method: requestAccounts ? 'eth_requestAccounts' : 'eth_accounts'
+      });
+      const [acct] = accounts;
+      if (!acct) {
+        setProvider(null);
+        setSigner(null);
+        setAddress('');
+        return;
+      }
+
+      const ethersProvider = new ethers.BrowserProvider(window.ethereum);
       const signer = await ethersProvider.getSigner();
       setProvider(ethersProvider);
       setSigner(signer);
@@ -27,6 +38,28 @@ export default function ConnectWallet({ address, chainId, setProvider, setSigner
       setErrorMessage(err?.shortMessage || 'Wallet connection failed. Please approve the MetaMask request.');
     }
   };
+
+  const connect = () => syncWallet(true);
+
+  useEffect(() => {
+    if (!window.ethereum?.on) return undefined;
+
+    const handleAccountsChanged = () => {
+      syncWallet(false);
+    };
+
+    const handleChainChanged = () => {
+      syncWallet(false);
+    };
+
+    window.ethereum.on('accountsChanged', handleAccountsChanged);
+    window.ethereum.on('chainChanged', handleChainChanged);
+
+    return () => {
+      window.ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
+      window.ethereum.removeListener?.('chainChanged', handleChainChanged);
+    };
+  }, []);
 
   return (
     <section className="wallet-card">

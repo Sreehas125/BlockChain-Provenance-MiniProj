@@ -4,6 +4,7 @@ import ConnectWallet from './components/ConnectWallet.jsx';
 import RegisterDataset from './components/RegisterDataset.jsx';
 import UpdateDataset from './components/UpdateDataset.jsx';
 import Dashboard from './components/Dashboard.jsx';
+import DataProvenanceArtifact from './abi/DataProvenance.json';
 
 export const Web3Context = createContext(null);
 
@@ -50,25 +51,48 @@ export default function App() {
       return;
     }
 
-    import('./abi/DataProvenance.json')
-      .then(module => {
-        const abi = module.default?.abi || module.default;
+    let active = true;
+
+    async function loadContract() {
+      try {
+        const abi = DataProvenanceArtifact.abi || DataProvenanceArtifact;
         const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
         if (!contractAddress || !ethers.isAddress(contractAddress)) {
-          setContract(null);
-          setContractError('Set a valid VITE_CONTRACT_ADDRESS in frontend/.env after deploying the contract.');
+          if (active) {
+            setContract(null);
+            setContractError('Set a valid VITE_CONTRACT_ADDRESS in frontend/.env after deploying the contract.');
+          }
+          return;
+        }
+
+        const code = await signer.provider.getCode(contractAddress);
+        if (code === '0x') {
+          if (active) {
+            setContract(null);
+            setContractError(`No contract is deployed at ${contractAddress} on the connected network.`);
+          }
           return;
         }
 
         const nextContract = new ethers.Contract(contractAddress, abi, signer);
-        setContract(nextContract);
-        setContractError('');
-      })
-      .catch(err => {
+        if (active) {
+          setContract(nextContract);
+          setContractError('');
+        }
+      } catch (err) {
         console.error('Failed to load ABI', err);
-        setContract(null);
-        setContractError('Failed to load the contract ABI from frontend/src/abi/DataProvenance.json.');
-      });
+        if (active) {
+          setContract(null);
+          setContractError('Failed to load the deployed contract. Re-run the deploy script and reconnect MetaMask.');
+        }
+      }
+    }
+
+    loadContract();
+
+    return () => {
+      active = false;
+    };
   }, [signer]);
 
   return (
