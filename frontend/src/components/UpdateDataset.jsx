@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 export default function UpdateDataset({ contract, onSuccess }) {
   const [id, setId] = useState('');
   const [newHash, setNewHash] = useState('');
-  const [prevId, setPrevId] = useState('');
   const [txHash, setTxHash] = useState('');
   const [createdVersionId, setCreatedVersionId] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -19,7 +18,21 @@ export default function UpdateDataset({ contract, onSuccess }) {
     try {
       setIsSubmitting(true);
       setErrorMessage('');
-      const tx = await contract.updateDataset(id, newHash, prevId);
+      const versionId = BigInt(id);
+      const trimmedHash = newHash.trim();
+      if (!trimmedHash) {
+        setErrorMessage('Enter a new CID before updating this dataset.');
+        return;
+      }
+
+      const currentDataset = await contract.getDataset(versionId);
+
+      if (currentDataset.ipfsHash === trimmedHash) {
+        setErrorMessage('No change detected. The new CID matches the existing dataset CID.');
+        return;
+      }
+
+      const tx = await contract.updateDataset(versionId, trimmedHash, versionId);
       const receipt = await tx.wait();
       const updateEvent = receipt.logs
         .map(log => {
@@ -35,7 +48,6 @@ export default function UpdateDataset({ contract, onSuccess }) {
       setCreatedVersionId(updateEvent ? updateEvent.args.id.toString() : '');
       setId('');
       setNewHash('');
-      setPrevId('');
       onSuccess?.();
     } catch (err) {
       console.error(err);
@@ -55,11 +67,12 @@ export default function UpdateDataset({ contract, onSuccess }) {
         <span className="panel-badge muted-badge">Record a new version</span>
       </div>
       <p className="muted-copy">Create a fresh on-chain version by linking it to the dataset version you are extending.</p>
-      <form className="three-column-form" onSubmit={submit}>
+      <form className="two-column-form" onSubmit={submit}>
         <input
           className="text-input"
           type="number"
-          placeholder="Current Version ID"
+          min="1"
+          placeholder="Version ID to extend"
           value={id}
           onChange={e => setId(e.target.value)}
           required
@@ -70,14 +83,6 @@ export default function UpdateDataset({ contract, onSuccess }) {
           placeholder="New IPFS hash"
           value={newHash}
           onChange={e => setNewHash(e.target.value)}
-          required
-        />
-        <input
-          className="text-input"
-          type="number"
-          placeholder="Previous Version ID"
-          value={prevId}
-          onChange={e => setPrevId(e.target.value)}
           required
         />
         <button className="secondary-button" type="submit" disabled={isSubmitting}>
